@@ -1,26 +1,67 @@
 const Web3 = require('web3');
 const HDWalletProvider = require('@truffle/hdwallet-provider');
+const fs = require('fs');
+
+// 스마트 컨트랙트 ABI와 주소를 불러옵니다.
+const contractABI = JSON.parse(fs.readFileSync('contractABI.json', 'utf-8'));
+const contractAddress = '0xContractAddress'; // 스마트 컨트랙트 주소를 입력하세요.
+const keys = JSON.parse(fs.readFileSync('key.json', 'utf-8'));
 
 // 이더리움 개인 키와 인포우라 엔드포인트를 사용하여 프로바이더를 설정합니다.
 const provider = new HDWalletProvider(
-  'your-private-key', // 여기에 이더리움 개인 키를 입력하세요.
-  'https://polygon-mumbai.infura.io/v3/your-infura-project-id' // 여기에 인포우라 프로젝트 ID를 입력하세요.
-);
-
+    keys.privateKey,
+    `https://polygon-amoy.infura.io/v3/${keys.infuraProjectId}`
+  );
 const web3 = new Web3(provider);
 
-const sendTransaction = async () => {
-  const accounts = await web3.eth.getAccounts();
+// 스마트 컨트랙트 인스턴스를 생성합니다.
+const contract = new web3.eth.Contract(contractABI, contractAddress);
 
-  console.log('Sending transaction from account:', accounts[0]);
-
-  const result = await web3.eth.sendTransaction({
-    from: accounts[0],
-    to: '0xrecipient', // 여기에 수신자 주소를 입력하세요.
-    value: web3.utils.toWei('0.1', 'ether')
+// 주문이 들어왔을 때 처리하는 엔드포인트
+app.post('/order', async (req, res) => {
+    try {
+      // 주문 정보를 받아옴
+      const orderData = req.body;
+  
+      // 주문 정보를 이용하여 트랜잭션 생성
+      const tx = contract.methods.createOrder(orderData.itemId, orderData.quantity).encodeABI();
+      const orderValue = '0.001'; // 이더리움 전송 금액을 문자열로 지정
+  
+      // 생성된 트랜잭션을 Polygon 네트워크로 전송
+      const receipt = await sendTransaction(tx, orderValue);
+  
+      // 트랜잭션이 성공적으로 전송되면 가게 측으로 응답
+      res.status(200).json({ message: 'Transaction sent successfully', txHash: receipt.transactionHash });
+    } catch (error) {
+      // 오류 발생 시 클라이언트에게 오류 메시지 전송
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // 트랜잭션을 보내는 함수
+  const sendTransaction = async (encodedTx, orderValue) => {
+    const accounts = await web3.eth.getAccounts();
+  
+    console.log('Sending transaction from account:', accounts[0]);
+  
+    const result = await web3.eth.sendTransaction({
+      from: accounts[0],
+      to: contractAddress, // 스마트 컨트랙트 주소
+      data: encodedTx, // 인코딩된 트랜잭션 데이터
+      value: web3.utils.toWei(orderValue, 'ether'), // 이더리움 전송 금액
+      gas: 1 // 가스, 실제 필요한 양에 따라 조정해야 할 수 있습니다.
+    });
+  
+    console.log('Transaction successful with hash:', result.transactionHash);
+    return result;
+  };
+  
+  // 예외 처리
+  process.on('unhandledRejection', (error) => {
+    console.error('Unhandled promise rejection:', error);
   });
 
-  console.log('Transaction successful with hash:', result.transactionHash);
-};
-
-sendTransaction().catch(console.error);
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
