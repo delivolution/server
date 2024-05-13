@@ -1,6 +1,10 @@
 const Web3 = require('web3');
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 const fs = require('fs');
+const { mongoose, connectDB } = require('./db');
+
+// MongoDB 연결
+connectDB();
 
 // 스마트 컨트랙트 ABI와 주소를 불러옵니다.
 const contractABI = JSON.parse(fs.readFileSync('contractABI.json', 'utf-8'));
