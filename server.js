@@ -42,12 +42,21 @@ app.post('/order', async (req, res) => {
       const orderData = req.body;
   
       // 주문 정보를 이용하여 트랜잭션 생성
-      const tx = contract.methods.createOrder(orderData.shopId, orderData.menuId, ).encodeABI();
+      const tx = contract.methods.createOrder(orderData.messageToOwner, orderData.shopId, orderData.menuId, 
+        orderData.amount, orderData.shopId
+      ).encodeABI();
+
+      //const orderValue = amount-(deliveryFee1 + deliveryFee2) -> 이더로변환해서 전달 -> deliveryFee빼는 이유는 기사측 금액은 서비스에서 정산
       const orderValue = '0.0001'; // 이더리움 전송 금액을 문자열로 지정 0.0001 = 400KRW정도(2024.5.14기준)
   
       // 생성된 트랜잭션을 Polygon 네트워크로 전송
       const receipt = await sendTransaction(tx, orderValue);
   
+
+      /* 
+      1. 이 부분에 배달기사 측 배차 pool에 주문 전달하는 코드필요
+      1. 이 부분에 가게측에 민감한 data따로 넘기는 code or 주문 전달하는 코드필요
+      */
       // 트랜잭션이 성공적으로 전송되면 가게 측으로 응답
       res.status(200).json({ message: 'Transaction sent successfully', txHash: receipt.transactionHash });
     } catch (error) {
