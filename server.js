@@ -11,7 +11,7 @@ connectDB();
 
 // 스마트 컨트랙트 ABI와 주소를 불러옵니다.
 const contractABI = JSON.parse(fs.readFileSync('contractABI.json', 'utf-8'));
-const contractAddress = '0xContractAddress'; // 스마트 컨트랙트 주소를 입력하세요.
+const contractAddress = '0x108cA678c08d0155c82A2274fB82286F78888a07'; // 스마트 컨트랙트 주소를 입력하세요.
 const keys = JSON.parse(fs.readFileSync('key.json', 'utf-8'));
 
 // 이더리움 개인 키와 인포우라 엔드포인트를 사용하여 프로바이더를 설정합니다.
@@ -43,10 +43,11 @@ app.post('/order', async (req, res) => {
       */
       // 주문 정보를 받아옴
       const orderData = req.body;
+      const recipientAddress = keys.address; // 주문 정보를 받을 지갑 주소
   
       // 주문 정보를 이용하여 트랜잭션 생성
       const tx = contract.methods.createOrder(orderData.messageToOwner, orderData.shopId, orderData.menuId, 
-        orderData.amount, orderData.shopId
+        orderData.amount, orderData.shopId, recipientAddress
       ).encodeABI();
 
       //const orderValue = amount-(deliveryFee1 + deliveryFee2) -> 이더로변환해서 전달 -> deliveryFee빼는 이유는 기사측 금액은 서비스에서 정산
@@ -65,7 +66,7 @@ app.post('/order', async (req, res) => {
         deliveryFee1: orderData.deliveryFee1,
         deliveryFee2: orderData.deliveryFee2,
         amount: orderData.amount,
-        payment: orderData.payment
+        payment: orderData.payment,
       };
       const db = mongoose.db('delivolution');
       const collection = db.collection('deliveryPool');
