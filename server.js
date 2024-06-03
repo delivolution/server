@@ -10,8 +10,8 @@ app.use(express.json()); // JSON 파싱을 위한 미들웨어 추가
 connectDB();
 
 // 스마트 컨트랙트 ABI와 주소를 불러옵니다.
-const contractABI = JSON.parse(fs.readFileSync('contractABI.json', 'utf-8'));
-const contractAddress = '0x108cA678c08d0155c82A2274fB82286F78888a07'; // 스마트 컨트랙트 주소를 입력하세요.
+const contractABI = JSON.parse(fs.readFileSync('./ContractABI.json', 'utf-8'));
+const contractAddress = '0x553B174382ceaEb7AB85dC29060A744e1eC8DDc9'; // 스마트 컨트랙트 주소를 입력하세요.
 const keys = JSON.parse(fs.readFileSync('key.json', 'utf-8'));
 
 // 이더리움 개인 키와 인포우라 엔드포인트를 사용하여 프로바이더를 설정합니다.
@@ -19,10 +19,12 @@ const provider = new HDWalletProvider(
     keys.privateKey,
     `https://polygon-amoy.infura.io/v3/${keys.infuraProjectId}`
   );
-const web3 = new Web3(provider);
+//const web3 = new Web3(provider);
+const web3 = new Web3(new Web3.providers.HttpProvider(`https://polygon-amoy.infura.io/v3/${keys.infuraProjectId}`));
 
 // 스마트 컨트랙트 인스턴스를 생성합니다.
 const contract = new web3.eth.Contract(contractABI, contractAddress);
+
 
 // 주문이 들어왔을 때 처리하는 엔드포인트
 app.post('/order', async (req, res) => {
