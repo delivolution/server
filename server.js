@@ -1,4 +1,4 @@
-const Web3 = require('web3');
+const {Web3} = require('web3');
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 const fs = require('fs');
 const { mongoose, connectDB } = require('./db');
@@ -10,7 +10,7 @@ app.use(express.json()); // JSON 파싱을 위한 미들웨어 추가
 connectDB();
 
 // 스마트 컨트랙트 ABI와 주소를 불러옵니다.
-const contractABI = JSON.parse(fs.readFileSync('./ContractABI.json', 'utf-8'));
+const contractABI = JSON.parse(fs.readFileSync('DeliveryOrder.json', 'utf-8'));
 const contractAddress = '0x553B174382ceaEb7AB85dC29060A744e1eC8DDc9'; // 스마트 컨트랙트 주소를 입력하세요.
 const keys = JSON.parse(fs.readFileSync('key.json', 'utf-8'));
 
@@ -19,11 +19,11 @@ const provider = new HDWalletProvider(
     keys.privateKey,
     `https://polygon-amoy.infura.io/v3/${keys.infuraProjectId}`
   );
-//const web3 = new Web3(provider);
-const web3 = new Web3(new Web3.providers.HttpProvider(`https://polygon-amoy.infura.io/v3/${keys.infuraProjectId}`));
+const web3 = new Web3(provider);
+//const web3 = new Web3(new Web3.providers.HttpProvider(`https://polygon-amoy.infura.io/v3/${keys.infuraProjectId}`));
 
 // 스마트 컨트랙트 인스턴스를 생성합니다.
-const contract = new web3.eth.Contract(contractABI, contractAddress);
+const contract = new web3.eth.Contract(contractABI.abi, contractAddress);
 
 
 // 주문이 들어왔을 때 처리하는 엔드포인트
@@ -32,7 +32,6 @@ app.post('/order', async (req, res) => {
       /*
       orderdata{
         deliveryAddress, (배달주소)
-        phoneNumber,
         messageToOwner,(사장님 요청사항)
         messageToRider, (라이더 요청사항)
         shopId, (주문하는 가게)
@@ -48,15 +47,22 @@ app.post('/order', async (req, res) => {
       const recipientAddress = keys.address; // 주문 정보를 받을 지갑 주소
   
       // 주문 정보를 이용하여 트랜잭션 생성
-      const tx = contract.methods.createOrder(orderData.messageToOwner, orderData.shopId, orderData.menuId, 
+      /*const tx = contract.methods.createOrder(orderData.messageToOwner, orderData.shopId, orderData.menuId, 
         orderData.amount, orderData.shopId, recipientAddress
+      ).encodeABI();*/
+
+      console.log("test2");
+      const tx = contract.methods.createOrder(orderData.messageToOwner, orderData.shopId, orderData.menuId, 
+        orderData.amount, orderData.deliveryAddress, orderData.messageToRider, orderData.deliveryFee1, orderData.deliveryFee2, orderData.payment, recipientAddress
       ).encodeABI();
 
       //const orderValue = amount-(deliveryFee1 + deliveryFee2) -> 이더로변환해서 전달 -> deliveryFee빼는 이유는 기사측 금액은 서비스에서 정산
       const orderValue = '0.0001'; // 이더리움 전송 금액을 문자열로 지정 0.0001 = 400KRW정도(2024.5.14기준)
   
+      console.log("test3");
       // 생성된 트랜잭션을 Polygon 네트워크로 전송
       const receipt = await sendTransaction(tx, orderValue);
+      console.log("test4");
   
 
       // 배달기사 측 배차 pool에 주문 전달
@@ -73,9 +79,6 @@ app.post('/order', async (req, res) => {
       const db = mongoose.db('delivolution');
       const collection = db.collection('deliveryPool');
       await collection.insertOne(deliveryItem);
-      /* 
-      1. 이 부분에 가게측에 민감한 data따로 넘기는 code or 주문 전달하는 코드필요
-      */
       // 트랜잭션이 성공적으로 전송되면 가게 측으로 응답
       res.status(200).json({ message: 'Transaction sent successfully', txHash: receipt.transactionHash });
     } catch (error) {
